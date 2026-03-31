@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -93,9 +93,9 @@
         import { getFirestore, doc, setDoc, collection, getDocs, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
         // ==========================================
-        // MASUKKAN API KEY GEMINI KAMU DI SINI
+        // MASUKKAN API KEY GROQ KAMU DI SINI
         // ==========================================
-        const GEMINI_API_KEY = "AIzaSyCHMQSpcPKPlV0rt5oUFFPwqNMr5LCC7tI"; 
+        const GROQ_API_KEY = "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"; 
 
         const firebaseConfig = {
             apiKey: "AIzaSyDUs1G-nzJwL78GsaUQX-BmbRz6QSW6_kU",
@@ -144,7 +144,6 @@
                 DOM.loginScreen.classList.add('hidden');
                 
                 const userName = user.displayName || 'Guest User';
-                // Jika foto tidak ada, gunakan inisial
                 const userPhoto = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=374151&color=fff`;
                 
                 DOM.headerProfilePic.src = userPhoto;
@@ -321,8 +320,8 @@
             const text = DOM.promptInput.value.trim();
             if (!text) return;
             
-            if (GEMINI_API_KEY === "MASUKKAN_API_KEY_DISINI" || !GEMINI_API_KEY) {
-                alert("Kamu belum memasukkan API Key Gemini di dalam kode HTML-nya!");
+            if (GROQ_API_KEY === "MASUKKAN_API_KEY_DISINI" || !GROQ_API_KEY) {
+                alert("Kamu belum memasukkan API Key Groq di dalam kode HTML-nya!");
                 return;
             }
             
@@ -333,6 +332,9 @@
             generateAIResponse(text, false);
         };
 
+        // ==========================================
+        // FETCH API GROQ (KEMBALI KE OPENAI FORMAT)
+        // ==========================================
         async function generateAIResponse(userText, isRegenerating) {
             toggleLoadingState(true);
 
@@ -352,25 +354,26 @@
             currentAbortController = new AbortController();
 
             try {
-                const geminiMessages = chatContext.map(msg => ({
-                    role: msg.role === 'user' ? 'user' : 'model',
-                    parts: [{ text: msg.content }]
-                }));
-
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contents: geminiMessages }),
+                    headers: {
+                        "Authorization": `Bearer ${GROQ_API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile", // Menggunakan Qwen dari Groq
+                        messages: chatContext 
+                    }),
                     signal: currentAbortController.signal
                 });
 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(errData.error?.message || "Gagal menghubungi Gemini API.");
+                    throw new Error(errData.error?.message || "Gagal menghubungi Groq API.");
                 }
                 
                 const data = await response.json();
-                const aiReply = data.candidates[0].content.parts[0].text;
+                const aiReply = data.choices[0].message.content;
                 
                 chatContext.push({ role: "assistant", content: aiReply });
                 renderChat();
